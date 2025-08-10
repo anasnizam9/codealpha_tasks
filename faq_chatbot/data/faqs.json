@@ -1,0 +1,10 @@
+[
+  {"question": "What is your return policy?", "answer": "You can return items within 30 days with the original receipt."},
+  {"question": "How can I track my order?", "answer": "Use the tracking link sent to your email or check the Orders page in your account."},
+  {"question": "Do you offer international shipping?", "answer": "Yes, we ship to most countries. Shipping fees are calculated at checkout."},
+  {"question": "How do I reset my password?", "answer": "Click 'Forgot password' on the login page and follow the instructions."},
+  {"question": "What payment methods are accepted?", "answer": "We accept Visa, MasterCard, PayPal, and Apple Pay."},
+  {"question": "How do I contact support?", "answer": "Email support@example.com or use the live chat on our website."},
+  {"question": "Can I cancel my order?", "answer": "Orders can be canceled within 2 hours of placing them from your Orders page."},
+  {"question": "Is there a student discount?", "answer": "Yes, students get 10% off after verification on the Student Discount page."}
+]

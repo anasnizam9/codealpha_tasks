@@ -1,0 +1,9 @@
+﻿# Ignore common build/cache files
+__pycache__/
+*.pyc
+.env
+node_modules/
+dist/
+build/
+.vscode/
+.DS_Store

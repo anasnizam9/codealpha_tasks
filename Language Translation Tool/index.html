@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Language Translation Tool</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      background: #f4f6f9;
+    }
+    header {
+      background: linear-gradient(135deg, #4facfe, #00f2fe);
+      color: white;
+      padding: 20px;
+      text-align: center;
+      box-shadow: 0 3px 6px rgba(0,0,0,0.1);
+    }
+    header h1 {
+      margin: 0;
+      font-size: 28px;
+    }
+    .container {
+      max-width: 900px;
+      margin: 30px auto;
+      padding: 20px;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    }
+    label {
+      font-weight: bold;
+      display: block;
+      margin-bottom: 6px;
+    }
+    select, textarea, button {
+      width: 100%;
+      padding: 10px;
+      font-size: 16px;
+      margin-bottom: 15px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      outline: none;
+      transition: 0.2s;
+    }
+    select:focus, textarea:focus {
+      border-color: #4facfe;
+      box-shadow: 0 0 5px rgba(79,172,254,0.5);
+    }
+    textarea {
+      min-height: 140px;
+      resize: vertical;
+    }
+    .row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+    }
+    .actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    button {
+      background: linear-gradient(135deg, #4facfe, #00f2fe);
+      color: white;
+      border: none;
+      cursor: pointer;
+      font-weight: bold;
+      transition: 0.3s;
+    }
+    button:hover {
+      opacity: 0.9;
+      transform: translateY(-1px);
+    }
+    .outbox {
+      border: 1px solid #ddd;
+      padding: 12px;
+      min-height: 120px;
+      background: #f9fbfd;
+      border-radius: 8px;
+    }
+    #status {
+      font-size: 14px;
+      color: gray;
+      margin-left: 8px;
+      align-self: center;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🌐 Language Translation Tool</h1>
+    <p>Translate text between multiple languages instantly</p>
+  </header>
+
+  <div class="container">
+    <div class="row">
+      <div>
+        <label>Source language</label>
+        <select id="source">
+          <option value="auto">Auto Detect</option>
+        </select>
+      </div>
+      <div>
+        <label>Target language</label>
+        <select id="target"></select>
+      </div>
+    </div>
+
+    <label>Text to translate</label>
+    <textarea id="inputText" placeholder="Type or paste your text here..."></textarea>
+
+    <div class="actions">
+      <button id="swapBtn" type="button">🔄 Swap</button>
+      <button id="translateBtn" type="button">⚡ Translate</button>
+      <span id="status"></span>
+    </div>
+
+    <label>Translated text</label>
+    <div id="output" class="outbox"></div>
+
+    <div class="actions">
+      <button id="copyBtn" type="button">📋 Copy</button>
+    </div>
+  </div>
+
+  <script>
+  const languages = [
+    ["ar","Arabic"],["bn","Bengali"],["zh","Chinese"],["cs","Czech"],["da","Danish"],
+    ["nl","Dutch"],["en","English"],["fi","Finnish"],["fr","French"],["de","German"],
+    ["el","Greek"],["hi","Hindi"],["hu","Hungarian"],["id","Indonesian"],["it","Italian"],
+    ["ja","Japanese"],["ko","Korean"],["fa","Persian"],["pl","Polish"],["pt","Portuguese"],
+    ["ro","Romanian"],["ru","Russian"],["es","Spanish"],["sv","Swedish"],["tr","Turkish"],
+    ["uk","Ukrainian"],["ur","Urdu"],["vi","Vietnamese"]
+  ];
+
+  const sourceSel = document.getElementById("source");
+  const targetSel = document.getElementById("target");
+  const inputText = document.getElementById("inputText");
+  const output = document.getElementById("output");
+  const statusEl = document.getElementById("status");
+
+  function fillLangs() {
+    languages.forEach(([code, name]) => {
+      sourceSel.appendChild(new Option(name, code));
+      targetSel.appendChild(new Option(name, code));
+    });
+    sourceSel.value = "auto";
+    targetSel.value = "en";
+  }
+  fillLangs();
+
+  document.getElementById("swapBtn").onclick = () => {
+    if (sourceSel.value === "auto") return;
+    const tmp = sourceSel.value;
+    sourceSel.value = targetSel.value;
+    targetSel.value = tmp;
+  };
+
+  const LIBRE_BASES = [
+    "https://libretranslate.de",
+    "https://translate.astian.org",
+    "https://libretranslate.com"
+  ];
+
+  async function callLibreTranslate(q, source, target) {
+    for (const base of LIBRE_BASES) {
+      try {
+        const res = await fetch(`${base}/translate`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Accept": "application/json" },
+          body: JSON.stringify({ q, source, target, format: "text" })
+        });
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        const data = await res.json();
+        if (!data.translatedText) throw new Error("No translatedText");
+        return data.translatedText;
+      } catch { /* try next */ }
+    }
+    throw new Error("All LibreTranslate endpoints failed");
+  }
+
+  async function detectLanguage(q) {
+    for (const base of LIBRE_BASES) {
+      try {
+        const res = await fetch(`${base}/detect`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Accept": "application/json" },
+          body: JSON.stringify({ q })
+        });
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        const arr = await res.json();
+        if (Array.isArray(arr) && arr[0]?.language) return arr[0].language;
+      } catch { /* try next */ }
+    }
+    // lightweight guess as last resort
+    const s = q.slice(0, 64);
+    if (/[اآء-ی]/.test(s)) return "ur";
+    if (/[а-яё]/i.test(s)) return "ru";
+    if (/[ぁ-んァ-ン]/.test(s)) return "ja";
+    if (/[一-龯]/.test(s)) return "zh";
+    return "en";
+  }
+
+  function toRFC3066IfNeeded(code) {
+    if (code === "zh") return "zh-CN";
+    if (code === "pt") return "pt-PT";
+    if (code === "en") return "en-US";
+    if (code === "ur") return "ur-PK";
+    return code;
+  }
+
+  async function callMyMemory(q, source, target) {
+    const src = toRFC3066IfNeeded(source);
+    const tgt = toRFC3066IfNeeded(target);
+    const url = new URL("https://api.mymemory.translated.net/get");
+    url.searchParams.set("q", q);
+    url.searchParams.set("langpair", `${src}|${tgt}`);
+    const r = await fetch(url.toString());
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    const j = await r.json();
+    const txt = j?.responseData?.translatedText;
+    if (!txt) throw new Error("No translatedText");
+    return txt;
+  }
+
+  document.getElementById("translateBtn").onclick = async () => {
+    const q = inputText.value.trim();
+    if (!q) { output.textContent = ""; return; }
+    let source = sourceSel.value || "auto";
+    const target = targetSel.value || "en";
+
+    statusEl.textContent = "Translating...";
+    output.textContent = "";
+
+    try {
+      const text = await callLibreTranslate(q, source, target);
+      output.textContent = text;
+      statusEl.textContent = "Done";
+      return;
+    } catch { /* fall through */ }
+
+    try {
+      if (source === "auto") source = await detectLanguage(q);
+      const text = await callMyMemory(q, source, target);
+      output.textContent = text;
+      statusEl.textContent = "Done (fallback)";
+    } catch {
+      statusEl.textContent = "Error";
+      output.textContent = "Translation failed. Try again in a minute.";
+    }
+  };
+
+  document.getElementById("copyBtn").onclick = async () => {
+    const text = output.textContent.trim();
+    if (!text) return;
+    await navigator.clipboard.writeText(text);
+    statusEl.textContent = "Copied!";
+    setTimeout(()=> statusEl.textContent = "", 1200);
+  };
+</script>
+
+
+
+</body>
+</html>
